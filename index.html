@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Leaflet Web Mapping App</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet-geosearch/3.3.2/geosearch.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" />
+       <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.js"></script>
+
+ <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-geosearch/3.3.2/geosearch.umd.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-routing-machine/3.2.12/leaflet-routing-machine.min.js"></script>
+    <style>
+        
+        body { 
+            margin: 0; 
+            padding: 0; 
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        #geolocate { position: absolute; top: 150px; left: 10px; z-index: 1000; background: white; border: none; border-radius: 5px; padding: 5px 10px; }
+        #map { 
+            flex: 1;
+            width: 100%;
+            position: relative;
+        }
+        #control-panel {
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .mode-buttons button {
+            margin: 0 5px;
+            padding: 8px 12px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .mode-buttons button:hover {
+            background-color: #0056b3;
+        }
+        .search-container {
+            position: absolute;
+            top: 80px;
+            left: 10px;
+            z-index: 1000;
+            background-color: white;
+            border-radius: 4px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .search-toggle {
+            width: 40px;
+            height: 40px;
+            background: white;
+            border-radius: 4px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            font-size: 20px;
+        }
+        .search-bar {
+            display: none;
+            padding: 10px;
+        }
+        .search-bar.active {
+            display: block;
+        }
+        .search-input {
+            width: 250px;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .layer-control {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+        }
+        .layer-toggle {
+            width: 40px;
+            height: 40px;
+            background: white;
+            border-radius: 4px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .layer-buttons {
+            display: none;
+            background: white;
+            border-radius: 4px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            padding: 10px;
+            margin-top: 10px;
+        }
+        .layer-buttons.active {
+            display: block;
+        }
+        .layer-buttons button {
+            display: block;
+            margin: 5px 0;
+            width: 100%;
+            padding: 8px;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .layer-buttons button:hover {
+            background-color: #e9ecef;
+        }
+        .leaflet-popup-content-wrapper {
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 8px;
+            box-shadow: 0 3px 14px rgba(0,0,0,0.2);
+        }
+        .leaflet-popup-content {
+            margin: 13px 19px;
+            line-height: 1.4;
+        }
+        .leaflet-popup-tip {
+            background: rgba(255, 255, 255, 0.9);
+        }
+        .leaflet-routing-container {
+    max-height: 300px; /* Adjust this value as needed */
+    overflow-y: auto;
+    overflow-x: hidden;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    margin-top: 80px !important;
+    background-color: transparent !important;
+    padding: 10px;
+    box-shadow: 0 1px 5px rgba(0,0,0,0.65);
+    opacity: 80%;
+    color: wheat;
+}
+
+.leaflet-routing-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.leaflet-routing-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+.leaflet-routing-container::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+.leaflet-routing-container::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+
+        #search-results {
+            position: absolute;
+            top: 130px;
+            left: 10px;
+            z-index: 1000;
+            background-color: white;
+            border-radius: 4px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            max-height: 300px;
+            overflow-y: auto;
+            display: none;
+            width: 250px;
+        }
+        #search-results div {
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+        }
+        #search-results div:last-child {
+            border-bottom: none;
+        }
+        #search-results div:hover {
+            background-color: #f0f0f0;
+        }
+
+        .geolocation-btn{
+            margin-top: 80px;
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div id="map">
+        <div class="search-container map-buttons">
+            <div class="search-toggle" onclick="toggleSearch()">🔍</div>
+            <div class="search-bar">
+                <input type="text" class="search-input" placeholder="Search...">
+            </div>
+        </div>
+        <div class="layer-control">
+            <div class="layer-toggle map-buttons" onclick="toggleLayers()">Map</div>
+            <div class="layer-buttons map-buttons">
+                <button onclick="setLayer('osm')">OpenStreetMap</button>
+                <button onclick="setLayer('satellite')">Google Satellite</button>
+                <button onclick="setLayer('hybrid')">Google Hybrid</button>
+                
+            </div>
+
+
+        </div>
+        <div class="map-buttons">
+            <button id="geolocate" class="" onclick="getGeolocation()"><i class="fas fa-map-marker-alt "></i></button>
+</div>
+
+        
+    </div>
+    <div id="control-panel">
+        <div class="mode-buttons">
+            <button onclick="setRoutingMode('car')">Car</button>
+            <button onclick="setRoutingMode('bike')">Motorcycle</button>
+            <button onclick="setRoutingMode('foot')">Walk</button>
+        </div>
+        <div>Selected mode: <span id="selected-mode">Car</span></div>
+        <div id="markers-count"></div>
+    </div>
+
+    <div id="search-results"></div>
+    <script src="Voiries_3.js"></script>
+    <script src="ilo3_1.js"></script>
+    <script src="Batisilo3_2.js"></script>
+    <script>
+        var map = L.map('map', {
+            zoomControl: false  // Disable default zoom control
+        });
+        L.control.zoom({
+            position: 'topleft'  // Add zoom control to top left
+        }).addTo(map);
+
+        var currentLayer;
+        var routingMode = 'car';
+
+        var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        });
+
+        var satelliteLayer = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+            attribution: '© Google'
+        });
+
+        var hybridLayer = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+            attribution: '© Google'
+        });
+
+        // Prevent click propagation for all map buttons
+document.querySelectorAll('.map-buttons').forEach(button => {
+    button.addEventListener('click', function(e) {
+        e.stopPropagation();
+    });
+
+    [...button.children].forEach(button => {button.addEventListener('click', function(e) {
+        e.stopPropagation();
+    });})
+});
+
+        function setLayer(layerName) {
+            if (currentLayer) {
+                map.removeLayer(currentLayer);
+            }
+            switch (layerName) {
+                case 'osm':
+                    currentLayer = osmLayer;
+                    break;
+                case 'satellite':
+                    currentLayer = satelliteLayer;
+                    break;
+                case 'hybrid':
+                    currentLayer = hybridLayer;
+                    break;
+            }
+            currentLayer.addTo(map);
+        }
+
+        setLayer('osm');
+
+        function toggleSearch() {
+            document.querySelector('.search-bar').classList.toggle('active');
+        }
+
+        function toggleLayers() {
+            document.querySelector('.layer-buttons').classList.toggle('active');
+        }
+
+        var routingControl;
+        var markers = [];
+
+        function setRoutingMode(mode) {
+            routingMode = mode;
+            document.getElementById('selected-mode').textContent = mode.charAt(0).toUpperCase() + mode.slice(1);
+            if (markers.length === 2) {
+                console.log(` length = ${markers.length}`);
+                updateRoute();
+            }
+        }
+
+        function updateRoute() {
+            if (routingControl) {
+                map.removeControl(routingControl);
+            }
+            routingControl = L.Routing.control({
+                waypoints: [
+                    markers[0].getLatLng(),
+                    markers[1].getLatLng()
+                ],
+                router: L.Routing.osrmv1({
+                    serviceUrl: 'https://router.project-osrm.org/route/v1',
+                    profile: routingMode
+                }),
+                routeWhileDragging: true,
+                lineOptions: {
+                    styles: [{color: 'red', opacity: 0.6, weight: 4}]
+                },
+                createMarker: function() { return null; },
+                addWaypoints: false,
+                fitSelectedRoutes: true,
+                showAlternatives: false
+            }).addTo(map);
+        }
+
+        map.on('click', function(e) {
+          
+            document.getElementById("markers-count").innerHTML = markers.length+1;
+            console.log(e.target);
+            if (markers.length < 2) {
+                var marker = L.marker(e.latlng).addTo(map);
+                markers.push(marker);
+
+                if (markers.length === 2) {
+                    updateRoute();
+                }
+            } else {
+                markers.forEach(marker => map.removeLayer(marker));
+                markers = [];
+                if (routingControl) {
+                    map.removeControl(routingControl);
+                    routingControl = null;
+                }
+            }
+        });
+
+        function addGeoJSONLayer(data, style, onEachFeature) {
+            L.geoJSON(data, {
+                style: style,
+                onEachFeature: onEachFeature
+            }).addTo(map);
+        }
+
+        addGeoJSONLayer(json_Batisilo3_2, {
+            fillColor: '#ff7800',
+            weight: 1,
+            opacity: 1,
+            color: 'white',
+            fillOpacity: 0.7
+        }, function(feature, layer) {
+            layer.on('click', function(e) {
+                //alert("click "+e.latlng);
+                console.log(feature);
+                L.popup()
+                    .setLatLng(e.latlng)
+                    .setContent(`<h3>Building Information</h3>
+                                 <p>Type: ${feature.type || 'N/A'}</p>
+                                 <p>Name: Batiment ${feature.properties.fid || 'N/A'}</p>
+                                `)
+                    .openOn(map);
+            });
+        });
+
+        let routeCounter = 1;
+        addGeoJSONLayer(json_Voiries_3, {
+            color: 'yellow',
+            weight: 3,
+            opacity: 0.7
+        }, function(feature, layer) {
+            layer.bindTooltip(`Route de Fokoue ${routeCounter}`, {permanent: true, direction: 'center'});
+            routeCounter++;
+        });
+
+        const ilo3Layer = L.geoJSON(json_ilo3_1, {
+            style: {
+                fillColor: 'None',
+                weight: 2,
+                opacity: 1,
+                color: 'white',
+                fillOpacity: 0.6
+            }
+        }).addTo(map);
+        map.fitBounds(ilo3Layer.getBounds());
+        const searchInput = document.querySelector('.search-input');
+        const searchResults = document.getElementById('search-results');
+
+        function displaySearchResults(results) {
+            searchResults.innerHTML = '';
+            console.log(results);
+            if (results.length > 0) {
+                results.forEach(result => {
+                    const div = document.createElement('div');
+                    console.log(result.name);
+                    div.textContent = result.name;
+                    div.onclick = () => {
+                        const latlng = [result.coordinates[1], result.coordinates[0]];
+                        map.setView(latlng, 18);
+                        if (result.source === 'local') {
+                            console.log('local');
+                            L.popup()
+                                .setLatLng(latlng)
+                                .setContent(`<h3>${result.name}</h3><p>Type: ${result.type}</p><p>Address: ${result.address}</p>`)
+                                .openOn(map);
+                                L.marker(latlng).addTo(map)
+                        } else {
+                            L.marker(latlng).addTo(map)
+                                .bindPopup(result.name)
+                                .openPopup();
+                        }
+                        searchResults.style.display = 'none';
+                    };
+                    searchResults.appendChild(div);
+                });
+                searchResults.style.display = 'block';
+            } else {
+                searchResults.style.display = 'none';
+            }
+        }
+
+        function customSearch(query) {
+            const results = [];
+            let count = 0;
+            let found = false;
+            let data = null;
+            json_Batisilo3_2.features.forEach(feature => {
+            
+                const props = feature.properties;
+                
+                if (props.fid == query) {
+                    console.log("OK search");
+                    results.push({
+                        name: `Batiment ${props.fid}`,
+                        type: props.type || 'N/A',
+                        address: props.address || 'N/A',
+                        coordinates: feature.geometry.coordinates[0][0][0],
+                        source: 'local'
+                    });
+                    found = true;
+                }
+            });
+
+            if (!found) {
+                // If not found in house features, try OpenStreetMap search
+                var url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`;
+                
+               fetch(url)
+                    .then((response) =>{
+                      return response.json()
+                    }).then(
+                       (data)=>{
+                        let dataResults = [];
+
+                        if (data.length > 0) {
+                            
+                            data.forEach(dataItem =>{
+                                var lon = parseFloat(dataItem.lon);
+                            var lat = parseFloat(dataItem.lat);
+                            console.log(lat,lon);
+                            console.log(dataItem);
+                            let result ={
+                        name: dataItem.name,
+                        type:  dataItem.type,
+                        address: dataItem.display_name,
+                        coordinates: [lon,lat],
+                        source: 'local'
+                    };
+                     dataResults.push(result);
+                            });
+                            displaySearchResults(dataResults);
+                           
+                  
+                            console.log('openstreetmap');
+                           
+                            //map.getView().animate({center: position, zoom: 12});
+                          } else {
+                            return null;
+                        }
+                       }
+                      ).catch(error => {
+                        alert('Error searching location: ' + error.message);
+                    });
+                    
+                    
+               
+               
+            }
+            
+            console.log(results);
+            return results;
+        }
+
+       
+        searchInput.addEventListener('keypress',  function(e) {
+        
+            if(e.key == 'Enter'){
+                 const query = this.value;
+            if (query.length >= 1) {
+                
+                const localResults = customSearch(query);
+                console.log(localResults);
+                
+                const combinedResults = [
+                    ...localResults,
+                ];
+                console.log(combinedResults);
+                displaySearchResults(combinedResults);
+            } else {
+                searchResults.style.display = 'none';
+            }
+            }
+           
+        });
+
+      
+        function getGeolocation() {
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition(function(position) {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    map.setView([lat, lon], 15);
+                    L.marker([lat, lon]).addTo(map)
+                        .bindPopup('Your location')
+                        .openPopup();
+                }, function(error) {
+                    console.error("Error: " + error.message);
+                    alert("Unable to retrieve your location");
+                });
+
+                if (markers.length === 1) {
+                        updateRoute();
+                    }
+            } else {
+                alert("Geolocation is not supported by your browser");
+            }
+        } </script>
+</body>
+</html>
